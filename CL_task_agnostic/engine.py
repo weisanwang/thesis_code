@@ -3,7 +3,6 @@ import torchio as tio
 from typing import Iterable
 from torch.utils.tensorboard import SummaryWriter
 
-
 def evaluate_batch(model: torch.nn.Module, val_criterion, data_loader: Iterable, device: torch.device, writer, writer_batch: int, args):
     model.eval()
     for i,task_id in enumerate(args.task_ids):
@@ -40,6 +39,7 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
         logdir = f"./log_results/log_CL_task_agnostic/{args.cl_method}_lora/{exp_name}"
     
     writer = SummaryWriter(log_dir=logdir)
+
 
     # Training
     writer_batch = 0

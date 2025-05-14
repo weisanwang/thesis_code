@@ -14,6 +14,14 @@ def set_seed(seed_value):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+def set_all_seeds(seed):
+    random.seed(seed)
+    # os.environ(“PYTHONHASHSEED”) = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+
 class CustomDataset(Dataset):
     def __init__(self, subjects, transforms=None, transform_args=None):
         self.subjects = subjects
@@ -44,7 +52,7 @@ def train_transforms(subject, args):
         tio.OneHot(num_classes=2)
     ])(subject)
 
-def test_transforms(subject):
+def test_transforms(subject, args):
     return tio.Compose([
         tio.ZNormalization(),
         tio.OneHot(num_classes=2)
@@ -160,14 +168,14 @@ def build_continual_dataloader(splited_dataset,args):
         dataset_train, dataset_val = splited_dataset[i]
         print('train_dataset size', len(dataset_train))
         print('test_dataset size', len(dataset_val))
-        data_loader_train = DataLoader(
+        data_loader_train = torch.utils.data.DataLoader(
                 dataset_train,
                 batch_size=args.batch_size,
                 shuffle=True,
                 num_workers=args.num_workers,
                 pin_memory=True,
         )
-        data_loader_val = DataLoader(
+        data_loader_val = torch.utils.data.DataLoader(
                 dataset_val,
                 batch_size=args.batch_size,
                 shuffle=False,

@@ -31,9 +31,3 @@ def get_args_parser():
     parser.add_argument('--optimizer', type=str, default='adam', help='optimizer')
     
     return parser
-
-# def get_args():
-#     return get_args_parser().parse_args()
-
-# # 如果需要默认参数，可以这样定义
-# args = get_args_parser().parse_args([])
