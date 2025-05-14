@@ -32,7 +32,9 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
     new_peak_detected=True
 
     # Define path of results output dir
-    exp_name = "_".join([f"{key}={value}" for key, value in vars(args).items() if key in ["lr", "batch_size", "batch_number", "seed", "num_control_points", "max_displacement"]])
+    exp_name = "_".join([f"{key}={value}" for key, value in vars(args).items() if key in [
+        "lr","lr_reduce_batch", "batch_size", "batch_number", "seed", "num_control_points", "max_displacement"
+        ]])
     if args.lora == False:
         logdir = f"./log_results/log_CL_task_agnostic/{args.cl_method}/{exp_name}"
     else:
@@ -66,7 +68,7 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
             # Testing
             evaluate_batch(model, val_criterion, data_loader, device, writer, writer_batch, args)
 
-            if (j+1) % 5 == 0:
+            if writer_batch % args.lr_reduce_batch == 0:
                 scheduler.step()
 
 

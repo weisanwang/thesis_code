@@ -5,6 +5,7 @@ def get_args_parser():
     
     # basic parameters
     parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
+    parser.add_argument('--lr_reduce_batch', type=int, default=5, help='learning rate reduce batches')
     parser.add_argument('--batch_size', type=int, default=16, help='batch size')
     parser.add_argument('--batch_number', type=int, default=200, help='training batches each stage')
     parser.add_argument('--num_workers', type=int, default=2, help='num_workers')
@@ -17,8 +18,8 @@ def get_args_parser():
     parser.add_argument('--task_ids', type=int, nargs='+', default=[99, 98, 97], help='task ids')
 
     # Augmentation parameters
-    parser.add_argument('--num_control_points', type=int, nargs=3, default=(4, 4, 4),help='num_control_points as "x,y,z"')
-    parser.add_argument('--max_displacement', type=int, nargs=3, default=(2, 2, 1),help='maximal displacement as "x,y,z"')
+    parser.add_argument('--num_control_points', type=int, nargs=3, default=[4, 4, 4],help='num_control_points as "x,y,z"')
+    parser.add_argument('--max_displacement', type=int, nargs=3, default=[2, 2, 1],help='maximal displacement as "x,y,z"')
 
     
     # continual learning parameters
