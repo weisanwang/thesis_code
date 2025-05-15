@@ -26,6 +26,8 @@ class ShiftDetector:
 
         # Count the number of plateau detected
         self.plateau_count = 0
+        # Count the number of peaks detected
+        self.peak_count = 0
 
     def update(self, loss: float) -> bool:
         """
@@ -52,6 +54,7 @@ class ShiftDetector:
             # New peak detected if the mean of sliding window increases more than the standard deviation between the two windows
             if mean - self.prev_mean > np.sqrt(self.prev_var):
                 self.new_peak_detected = True
+                self.peak_count += 1
                 print(
                     f"[ShiftDetector] 🔺 Domain shift detected!"
                     f"mean={mean:.4f}, var={var:.6f}"

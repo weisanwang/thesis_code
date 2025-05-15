@@ -1,9 +1,11 @@
+import os
 import torch
 import torchio as tio
 from typing import Iterable
 from torch.utils.tensorboard import SummaryWriter
-from CL_task_agnostic.CL_function import EWCpp
+
 from CL_task_agnostic.shift_detector import ShiftDetector
+from CL_task_agnostic.CL_function import CLStrategy, EWCPlusStrategy, LwFStrategy
 
 def evaluate_batch(model: torch.nn.Module, val_criterion, data_loader: Iterable, device: torch.device, writer, writer_batch: int, args):
     model.eval()
@@ -27,15 +29,12 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
 
     count_updates=0
     batch=[]
-    # Loss detection
-    loss_window=[]
-    loss_window_means=[]
-    loss_window_variances=[]
-    new_peak_detected=True
-    detector = ShiftDetector(
+    # Loss detector
+    shift_detector = ShiftDetector(
         slide_window_length=args.slide_window_length, 
         mean_threshold=args.mean_threshold, 
-        var_threshold=args.var_threshold)
+        var_threshold=args.var_threshold
+        )
 
     # Define path of results output dir
     exp_name = "_".join([f"{key}={value}" for key, value in vars(args).items() if key in [
@@ -46,8 +45,23 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
     else:
         logdir = f"./log_results/log_CL_task_agnostic/{args.cl_method}_lora/{exp_name}"
     
+    # Create tensorboard writer to save the results
+    os.makedirs(logdir, exist_ok=True)
     writer = SummaryWriter(log_dir=logdir)
+    # Create a txt document to save the peak detection results
+    txt_log = os.path.join(logdir, 'domain_shifts.txt')
 
+    if args.cl_method == 'ewc':
+        cl_strategy = EWCPlusStrategy(
+            device=device,
+            alpha=args.ewc_alpha,
+            ewc_lambda=args.ewc_lambda,
+            normalize=True
+        )
+    elif args.cl_method == 'lwf':  
+        pass
+    elif args.cl_method == 'none':
+        cl_strategy = CLStrategy()
 
     # Training
     writer_batch = 0
@@ -63,35 +77,35 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
 
             # Basic loss
             loss_batch = criterion(logits, labels)
-            loss_for_peak_detector = loss_batch.item() 
 
             # Detect if domain shift
-            if detector.update(loss_for_peak_detector):
-                # apply ewc
+            loss_for_peak_detector = loss_batch.item() 
+            if shift_detector.update(loss_for_peak_detector):
+                cl_strategy.on_domain_shift(model)
+                # Write the detected peak into the txt file
+                with open(txt_log, 'a') as f:
+                    f.write(f"Batch {writer_batch} got the {shift_detector.peak_count} peak\n")
                 
-
-
-            # Calculate the total loss of current batch
-            if args.cl_method == 'None':
-                total_loss = loss_batch
-            elif args.cl_method == 'ewc':
-                ewc_loss = args.ewc_lambda * ewc.penalty()  
-                writer.add_scalar(f'ewc_loss', ewc_loss, writer_batch)
-                total_loss = criterion(logits, labels) + ewc_loss
-            # elif args.cl_method == 'lwf':
-            #     lwf_loss = args.lwf_lambda * lwf.penalty()
-            #     writer.add_scalar(f'lwf_loss', lwf_loss, writer_batch)
-            #     total_loss = criterion(logits, labels) + lwf_loss
-
             optimizer.zero_grad()
-            total_loss.backward()
+            # Get the gradient of the basic loss
+            loss_batch.backward()
+
+            # Update the CL strategy 
+            cl_strategy.after_backward(model)
+
+            # CL loss 
+            loss_cl = cl_strategy.penalty(model)
+            if loss_cl.item() != 0.0:
+                loss_cl.backward()
+
             optimizer.step()
             current_lr = optimizer.param_groups[0]['lr']
 
-            print(f"Batch {writer_batch} get loss: {total_loss}")
+            print(f"Batch {writer_batch} get basic loss: {loss_batch.item()} and CL loss: {loss_cl.item()}")
             # print(f"Batch {writer_batch} get learning rate: {current_lr}")
             writer.add_scalar(f'learning rate', current_lr, writer_batch)
-            writer.add_scalar(f'train_loss', total_loss, writer_batch)
+            writer.add_scalar(f'total train loss', loss_batch.item() + loss_cl.item(), writer_batch)
+            writer.add_scalar(f'CL loss', loss_cl.item(), writer_batch)
 
 
             # Testing

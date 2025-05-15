@@ -25,6 +25,9 @@ def get_args_parser():
     # continual learning parameters
     parser.add_argument('--cl_method', type=str, default='none', 
                        choices=['none', 'ewc', 'lwf'], help='Continual learning method')
+    parser.add_argument('--ewc_lambda', type=float, default=1.0, help='ewc lambda')
+    parser.add_argument('--ewc_alpha', type=float, default=0.9, help='ewc alpha')
+    
     parser.add_argument('--task_number', type=int, default=3, help='task number')
     
     # optimizer parameters
