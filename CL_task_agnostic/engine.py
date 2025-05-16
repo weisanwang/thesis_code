@@ -93,8 +93,8 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
             # Update the CL strategy 
             cl_strategy.after_backward(model)
 
-            # CL loss 
-            loss_cl = cl_strategy.penalty(model)
+            # CL strategy loss 
+            loss_cl = cl_strategy.penalty(model, student_logits=logits, inputs=images)
             if loss_cl.item() != 0.0:
                 loss_cl.backward()
 

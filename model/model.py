@@ -8,7 +8,7 @@ class ConvBlock(torch.nn.Module):
         super().__init__()
         
         self.step = torch.nn.Sequential(
-            # Cpnv
+            # Conv
             torch.nn.Conv3d(in_channels=in_channels,out_channels=middle_channels,kernel_size=3,padding=1,stride=1),
             # Batch Norm
             torch.nn.BatchNorm3d(middle_channels),
@@ -118,67 +118,8 @@ class UNet3D(torch.nn.Module):
         return x8
         # return x9
     
-# class dice_loss(torch.nn.Module):
-#     def __init__(self):
-#         super().__init__()
-#     def forward(self, pred, target):
-#         intersection = torch.sum(pred * target, dim=(2, 3, 4))
-#         union = torch.sum(pred, dim=(2, 3, 4)) + torch.sum(target, dim=(2, 3, 4))
-#         dice = (2 * intersection ) / (union + 1e-6) 
-#         # print('dice loss',dice.shape)
-#         dice_loss = 1 - dice[:, 1].mean()
-#         # return dice_loss.mean()
-#         return dice_loss
+## WIP: Try Generalized Dice Loss with softmax
 
-
-# class dice_loss(torch.nn.Module):
-#     def __init__(self):
-#         super().__init__()
-#     def forward(self, pred, target):
-#         pred = pred[:, 1]
-#         target = target[:,1]
-#         intersection = torch.sum(pred * target, dim=(1, 2, 3))
-#         union = torch.sum(pred, dim=(1, 2, 3)) + torch.sum(target, dim=(1, 2, 3))
-#         dice = (2 * intersection ) / (union + 1e-6)
-#         dice_loss = 1 - dice.mean()
-#         return dice_loss
-
-# loss_fn = dice_loss()   
-
-# Define Dice score function for evaluation
-# class dice_coefficient(torch.nn.Module):
-#     def __init__(self):
-#         super().__init__()
-#     def forward(self, pred, target):
-#         intersection = torch.sum(pred * target, dim=(2, 3, 4))
-#         union = torch.sum(pred, dim=(2, 3, 4)) + torch.sum(target, dim=(2, 3, 4))
-#         dice = (2 * intersection ) / (union + 1e-6)
-#         return dice.mean()    
-# # dice_fn = dice_coefficient()
-
-
-# def train_model(net, trainloader, epoch, writer, optimizer, scheduler, DEVICE):
-#     scaler = GradScaler()
-#     loss_fn = dice_loss() 
-#     net.train()
-#     dice_loss_sum = 0
-#     for batch in tqdm(trainloader, "Training"):
-#         images = batch['mri'][tio.DATA].to(DEVICE)
-#         labels = batch['segmentation'][tio.DATA].to(DEVICE)
-#         optimizer.zero_grad()
-#         with autocast():
-#             prediction = net(images)
-#             loss_batch = loss_fn(prediction, labels)
-#         scaler.scale(loss_batch).backward()
-#         scaler.step(optimizer)
-#         scaler.update()
-#         dice_loss_sum += loss_batch
-#     scheduler.step()
-#     # current_lr = optimizer.param_groups[0]['lr']
-#     # writer.add_scalar(f'learning rate', current_lr, epoch)
-#     average_dice_loss = dice_loss_sum / len(trainloader)
-#     writer.add_scalar(f'dice_loss', average_dice_loss, epoch)
-#     print(f"Epoch {epoch+1}, average dice loss: {average_dice_loss}")
 
 
 
