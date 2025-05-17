@@ -3,11 +3,7 @@ from torchsummary import summary
 import torch
 import time
 import torch.nn.functional as F
-from torch.cuda.amp import GradScaler, autocast
-from torch.utils.tensorboard import SummaryWriter
-import torchio as tio
-from torch.utils.data import Dataset, DataLoader
-from tqdm import tqdm
+
 
 class Conv3DBlock(nn.Module):
     """
