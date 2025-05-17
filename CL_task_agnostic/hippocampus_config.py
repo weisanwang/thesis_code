@@ -12,6 +12,11 @@ def get_args_parser():
     parser.add_argument('--device', default='cuda:0', help='device (cuda or cpu)')
     parser.add_argument('--seed', type=int, default=42, help='random seed')
     parser.add_argument('--lora', type=bool, default=False, help='use lora adapter')
+    # net and criterion parameters
+    parser.add_argument('--model', type=str, default='3DUNET', 
+                       choices=['3DUNET', 'git_3DUNET'], help='Model for training')
+    parser.add_argument('--criterion', type=str, default='Dice', 
+                       choices=['Dice', 'git_Dice'], help='Model for training')
     
     # dataset  parameters
     parser.add_argument('--data_path', type=str, default='./data', help='dataset path')

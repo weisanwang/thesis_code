@@ -4,7 +4,8 @@ import torch.backends.cudnn as cudnn
 from CL_task_agnostic.datasets import build_continual_dataloader, set_seed, split_hippocampus_datasets
 from CL_task_agnostic.engine import train_and_evaluate
 from CL_task_agnostic.hippocampus_config import get_args_parser
-from model.model import UNet3D, dice_loss_logit, dice_coefficient_logit
+from model.model import UNet3D, dice_loss_logit, dice_coefficient_logit, GeneralizedDiceLoss, DiceCoefficient
+from model.model_1 import UNet3D_test
 
 os.environ["OMP_NUM_THREADS"] = "4"
 os.environ["MKL_NUM_THREADS"] = "4"
@@ -25,12 +26,19 @@ def main(args):
     # print(f"Data loaded with {len(data_loader)} tasks")
 
     # Creat training model
-    net = UNet3D().to(device)
+    if args.model == 'git_3DUNET':
+        net = UNet3D_test(in_channels=1, num_classes=2).to(device)
+    elif args.model == '3DUNET':
+        net = UNet3D().to(device)
     print(args)
     optimizer = torch.optim.AdamW(net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
-    criterion = dice_loss_logit()
-    val_criterion = dice_coefficient_logit()
+    if args.criterion == 'git_Dice':
+        criterion = GeneralizedDiceLoss(normalization='softmax', epsilon=1e-6)
+        val_criterion = DiceCoefficient(epsilon=1e-6)
+    elif args.criterion == 'Dice':
+        criterion = dice_loss_logit()
+        val_criterion = dice_coefficient_logit()
 
     train_and_evaluate(
         model=net, 
