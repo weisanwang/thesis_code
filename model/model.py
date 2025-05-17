@@ -225,14 +225,21 @@ def compute_per_channel_dice(input, target, epsilon=1e-6, weight=None):
     target = target.float()
 
     # compute per channel Dice Coefficient
-    intersect = (input * target).sum(-1)
     if weight is not None:
-        intersect = weight * intersect
+        w_l = weight
+    else:
+        w_l = target.sum(-1)
+        w_l = 1 / (w_l * w_l).clamp(min=epsilon)
+        w_l.requires_grad = False
+
+    intersect = (input * target).sum(-1)
+    intersect = intersect * w_l
 
     # here we can use standard dice (input + target).sum(-1) or extension (see V-Net) (input^2 + target^2).sum(-1)
     denominator = (input + target).sum(-1)
+    denominator = (denominator * w_l).clamp(min=epsilon)
     # denominator = (input * input).sum(-1) + (target * target).sum(-1)
-    return 2 * (intersect / denominator.clamp(min=epsilon))
+    return 2 * (intersect.sum() / denominator.sum())
 
 class DiceCoefficient:
     """Computes Dice Coefficient.

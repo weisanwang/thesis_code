@@ -8,7 +8,7 @@ class CLStrategy:
         pass
     def penalty(self, model, student_logits=None, inputs=None):
         """penalty loss"""
-        return 0.0
+        return torch.tensor(0.0, device=next(model.parameters()).device)
     def after_backward(self, model):
         """updata"""
         pass
