@@ -37,19 +37,34 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
         )
 
     # Define path of results output dir
-    exp_name = "_".join([f"{key}={value}" for key, value in vars(args).items() if key in [
-        "model","criterion","lr","lr_reduce_batch", "batch_size", "batch_number", "seed", "num_control_points", "max_displacement"
-        ]])
+    base_keys = [
+        "model","criterion","lr","lr_reduce_batch",
+        "batch_size","batch_number","seed",
+        "num_control_points","max_displacement"
+    ]
+    method_keys = {
+        "none": [],
+        "ewc": ["ewc_lambda", "ewc_alpha"],
+        "lwf": ["lwf_lambda", "lwf_temperature"],
+    }
+    # get the keys of the arguments
+    keys = base_keys + method_keys.get(args.cl_method, [])
+    # concatenate the keys to create the experiment name
+    exp_name = "_".join(f"{k}={getattr(args, k)}" for k in keys)
+    
     if args.lora == False:
         logdir = f"./log_results/log_CL_task_agnostic/{args.cl_method}/{exp_name}"
+        txt_dir = f"./log_results/log_CL_task_agnostic/{args.cl_method}_txt/{exp_name}"
     else:
         logdir = f"./log_results/log_CL_task_agnostic/{args.cl_method}_lora/{exp_name}"
+        txt_dir = f"./log_results/log_CL_task_agnostic/{args.cl_method}_lora_txt/{exp_name}"
     
     # Create tensorboard writer to save the results
     os.makedirs(logdir, exist_ok=True)
     writer = SummaryWriter(log_dir=logdir)
     # Create a txt document to save the peak detection results
-    txt_log = os.path.join(logdir, 'domain_shifts.txt')
+    txt_dir = 
+    txt_log = os.path.join(txt_dir, 'domain_shifts.txt')
 
     if args.cl_method == 'ewc':
         cl_strategy = EWCPlusStrategy(
@@ -59,7 +74,11 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
             normalize=True
         )
     elif args.cl_method == 'lwf':  
-        pass
+        cl_strategy = LwFStrategy(
+            device=device,
+            lwf_lambda=args.lwf_lambda,
+            temperature=args.lwf_temperature
+        )
     elif args.cl_method == 'none':
         cl_strategy = CLStrategy()
 
@@ -104,7 +123,7 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
             print(f"Batch {writer_batch} get basic loss: {loss_batch.item()} and CL loss: {loss_cl.item()}")
             # print(f"Batch {writer_batch} get learning rate: {current_lr}")
             writer.add_scalar(f'learning rate', current_lr, writer_batch)
-            writer.add_scalar(f'total train loss', loss_batch.item() + loss_cl.item(), writer_batch)
+            writer.add_scalar(f'train loss', loss_batch.item() + loss_cl.item(), writer_batch)
             writer.add_scalar(f'CL loss', loss_cl.item(), writer_batch)
 
 
