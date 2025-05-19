@@ -22,7 +22,8 @@ def normalize_fn(fisher, EPS = 1e-20):
     return (fisher - fisher.min()) / (fisher.max() - fisher.min() + EPS)   
 
 class EWCPlusStrategy(CLStrategy):
-    def __init__(self, device, alpha=0.9, ewc_lambda=1.0, normalize=True):
+    def __init__(self, model, device, alpha=0.9, ewc_lambda=1.0, normalize=True):
+        self.model = model
         self.device = device
         self.alpha = alpha
         self.ewc_lambda = ewc_lambda
@@ -49,9 +50,9 @@ class EWCPlusStrategy(CLStrategy):
                 if p.requires_grad
                 }
 
-    def penalty(self, model, inputs=None):
+    def penalty(self, model, student_logits=None, inputs=None):
         if self.fisher_old is None:
-            return 0.0
+            return torch.tensor(0.0, device=self.device)
         loss = 0.0
         for n, p in model.named_parameters():
             if p.requires_grad:

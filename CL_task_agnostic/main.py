@@ -33,10 +33,10 @@ def main(args):
     print(args)
     optimizer = torch.optim.AdamW(net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
-    if args.criterion == 'git_Dice':
+    if args.criterion == 'GDL':
         criterion = GeneralizedDiceLoss(normalization='softmax', epsilon=1e-6)
         val_criterion = DiceCoefficient(epsilon=1e-6)
-    elif args.criterion == 'Dice':
+    elif args.criterion == 'DL':
         criterion = dice_loss_logit()
         val_criterion = dice_coefficient_logit()
 

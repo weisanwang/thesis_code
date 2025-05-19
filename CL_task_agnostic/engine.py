@@ -38,9 +38,7 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
 
     # Define path of results output dir
     base_keys = [
-        "model","criterion","lr","lr_reduce_batch",
-        "batch_size","batch_number","seed",
-        "num_control_points","max_displacement"
+        "criterion","lr","lr_reduce_batch","seed"
     ]
     method_keys = {
         "none": [],
@@ -61,13 +59,14 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
     
     # Create tensorboard writer to save the results
     os.makedirs(logdir, exist_ok=True)
+    os.makedirs(txt_dir, exist_ok=True)
     writer = SummaryWriter(log_dir=logdir)
     # Create a txt document to save the peak detection results
-    txt_dir = 
     txt_log = os.path.join(txt_dir, 'domain_shifts.txt')
 
     if args.cl_method == 'ewc':
         cl_strategy = EWCPlusStrategy(
+            model=model,
             device=device,
             alpha=args.ewc_alpha,
             ewc_lambda=args.ewc_lambda,
@@ -86,6 +85,8 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
     writer_batch = 0
     for i, _ in enumerate(args.task_ids):
         print(f"Training start =========================================")
+        # if i != 0:
+        #     cl_strategy.on_domain_shift(model)  
         for _, data in enumerate(data_loader[i]['train']):
             writer_batch += 1
             # Training
@@ -107,7 +108,8 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
                 
             optimizer.zero_grad()
             # Get the gradient of the basic loss
-            loss_batch.backward()
+            loss_batch.backward(retain_graph=True)
+            # loss_batch.backward()
 
             # Update the CL strategy 
             cl_strategy.after_backward(model)
@@ -116,6 +118,9 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
             loss_cl = cl_strategy.penalty(model, student_logits=logits, inputs=images)
             if loss_cl.item() != 0.0:
                 loss_cl.backward()
+            # Get the total loss
+            # total_loss = loss_batch + loss_cl
+            # total_loss.backward()
 
             optimizer.step()
             current_lr = optimizer.param_groups[0]['lr']
@@ -123,7 +128,7 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
             print(f"Batch {writer_batch} get basic loss: {loss_batch.item()} and CL loss: {loss_cl.item()}")
             # print(f"Batch {writer_batch} get learning rate: {current_lr}")
             writer.add_scalar(f'learning rate', current_lr, writer_batch)
-            writer.add_scalar(f'train loss', loss_batch.item() + loss_cl.item(), writer_batch)
+            writer.add_scalar(f'train loss', loss_batch.item(), writer_batch)
             writer.add_scalar(f'CL loss', loss_cl.item(), writer_batch)
 
 

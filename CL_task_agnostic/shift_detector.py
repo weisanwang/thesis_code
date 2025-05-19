@@ -4,18 +4,25 @@ class ShiftDetector:
     def __init__(self,
                  slide_window_length: int,
                  mean_threshold: float,
-                 var_threshold: float):
+                 var_threshold: float,
+                 jump_threshold: float = 0.5):
         """
         slide_window_length: The length of slide window
         mean_threshold     : Threshold for the mean of the loss in the sliding window
         var_threshold      : Threshold for the variance of the loss in the sliding window
+        jump_threshold     : Threshold for the jump of the loss between two batches
         """
         self.slide_window_length = slide_window_length
         self.mean_threshold = mean_threshold
         self.var_threshold = var_threshold
+        self.jump_threshold = jump_threshold
 
         # Keep a sliding window of the last N loss values
         self.loss_window = []
+
+        # Save the previous loss and current loss
+        self.prev_batch_loss = None
+        self.curr_batch_loss = None
 
         # Save the mean and variance of the last two windows
         self.prev_mean = None
@@ -45,14 +52,20 @@ class ShiftDetector:
         if len(self.loss_window) < self.slide_window_length:
             return False
 
+        # Store the batch loss
+        self.prev_batch_loss = self.curr_batch_loss
+        self.curr_batch_loss = loss
+
         # Calculate the mean and variance of the loss in the sliding window
         mean = float(np.mean(self.loss_window))
         var  = float(np.var(self.loss_window))
 
         # Detect the new peak (domain shift) only after the plateau and not the first window
-        if (not self.new_peak_detected) and (self.prev_mean is not None):
+        if (not self.new_peak_detected) and (self.prev_mean is not None) and (self.prev_batch_loss is not None):
+            # Calculate the jump ratio
+            jump_ratio = (self.curr_batch_loss - self.prev_batch_loss) / self.prev_batch_loss 
             # New peak detected if the mean of sliding window increases more than the standard deviation between the two windows
-            if mean - self.prev_mean > np.sqrt(self.prev_var):
+            if mean - self.prev_mean > np.sqrt(self.prev_var) and jump_ratio > self.jump_threshold:
                 self.new_peak_detected = True
                 self.peak_count += 1
                 print(
