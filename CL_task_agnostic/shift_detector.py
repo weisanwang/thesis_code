@@ -5,7 +5,7 @@ class ShiftDetector:
                  slide_window_length: int,
                  mean_threshold: float,
                  var_threshold: float,
-                 jump_threshold: float = 0.5):
+                 jump_threshold: float):
         """
         slide_window_length: The length of slide window
         mean_threshold     : Threshold for the mean of the loss in the sliding window
@@ -24,9 +24,12 @@ class ShiftDetector:
         self.prev_batch_loss = None
         self.curr_batch_loss = None
 
-        # Save the mean and variance of the last two windows
+        # Save the mean and variance of the last window
         self.prev_mean = None
         self.prev_var  = None
+        # Save the mean and variance of the current window
+        self.curr_mean = None
+        self.curr_var  = None
 
         # State flag: True indicates "Waiting for detecting plateau", False indicates "Wating for detecting new peak"
         self.new_peak_detected = True
@@ -36,7 +39,7 @@ class ShiftDetector:
         # Count the number of peaks detected
         self.peak_count = 0
 
-    def update(self, loss: float) -> bool:
+    def update(self, loss: float) -> str:
         """
         Called after training each batch:
         - loss: The loss value (float) of the current batch Returns:
@@ -45,51 +48,42 @@ class ShiftDetector:
         """
         # Append the current loss to the sliding window
         self.loss_window.append(loss)
+
+        # If the sliding window is full, remove the oldest loss
         if len(self.loss_window) > self.slide_window_length:
             del self.loss_window[0]
-
-        # If the sliding window is not full, return False
+        # If the sliding window is not full, return 'none'
         if len(self.loss_window) < self.slide_window_length:
-            return False
+            return 'none'
 
         # Store the batch loss
         self.prev_batch_loss = self.curr_batch_loss
         self.curr_batch_loss = loss
 
         # Calculate the mean and variance of the loss in the sliding window
-        mean = float(np.mean(self.loss_window))
-        var  = float(np.var(self.loss_window))
+        self.curr_mean = float(np.mean(self.loss_window))
+        self.curr_var  = float(np.var(self.loss_window))
 
-        # Detect the new peak (domain shift) only after the plateau and not the first window
-        if (not self.new_peak_detected) and (self.prev_mean is not None) and (self.prev_batch_loss is not None):
-            # Calculate the jump ratio
-            jump_ratio = (self.curr_batch_loss - self.prev_batch_loss) / self.prev_batch_loss 
-            # New peak detected if the mean of sliding window increases more than the standard deviation between the two windows
-            if mean - self.prev_mean > np.sqrt(self.prev_var) and jump_ratio > self.jump_threshold:
-                self.new_peak_detected = True
-                self.peak_count += 1
-                print(
-                    f"[ShiftDetector] 🔺 Domain shift detected!"
-                    f"mean={mean:.4f}, var={var:.6f}"
-                    )
-                # Save the mean and variance of current window
-                self.prev_mean = mean
-                self.prev_var  = var
-                return True
-
-        # Detect the plateau only after the new peak
+        status = 'none'
         if self.new_peak_detected:
-            if (mean < self.mean_threshold) and (var < self.var_threshold):
-                self.plateau_count += 1
-                print(
-                    f"[ShiftDetector] ── Plateau #{self.plateau_count} detected!"
-                    f"mean={mean:.4f}, var={var:.6f}"
-                )
-                # Switch to "Waiting for next peak" state
+            # plateau?
+            if (self.curr_mean < self.mean_threshold) and (self.curr_var < self.var_threshold):
+                status = 'plateau'
                 self.new_peak_detected = False
+                self.plateau_count += 1
 
-        # Save the mean and variance of current window
-        self.prev_mean = mean
-        self.prev_var  = var
-
-        return False
+        else:
+            # peak?
+            if (self.prev_mean is not None) and (self.prev_batch_loss is not None):
+                # Calculate the jump ratio
+                jump_ratio = (self.curr_batch_loss - self.prev_batch_loss) / self.prev_batch_loss 
+                if (self.curr_mean - self.prev_mean > np.sqrt(self.prev_var)
+                and jump_ratio > self.jump_threshold):
+                    status = 'peak'
+                    self.new_peak_detected = True
+                    self.peak_count += 1
+        
+        # Update the previous mean and variance
+        self.prev_mean, self.prev_var = self.curr_mean, self.curr_var
+        
+        return status

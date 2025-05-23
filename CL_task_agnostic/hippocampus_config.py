@@ -17,7 +17,18 @@ def get_args_parser():
     parser.add_argument('--num_workers', type=int, default=2, help='num_workers')
     parser.add_argument('--device', default='cuda:0', help='device (cuda or cpu)')
     parser.add_argument('--seed', type=int, default=42, help='random seed')
-    parser.add_argument('--lora', type=bool, default=False, help='use lora adapter')
+
+    # LoRA parameters
+    parser.add_argument('--lora', type=bool, default=False, help='use lora adapter or not')
+    parser.add_argument('--lora_r', type=int, default=16, help='rank of LoRA')
+    parser.add_argument('--lora_alpha', type=int, default=16, help='alpha of LoRA')
+    parser.add_argument('--lora_dropout', type=float, default=0.1, help='dropout of LoRA')
+    # Target modules for LoRA
+    parser.add_argument('--lora_target_modules', type=str, nargs='+', default=["layer5.step.0", "layer5.step.3",
+                                                                          "layer6.step.0", "layer6.step.3",
+                                                                          "layer7.step.0", "layer7.step.3",
+                                                                          "layer8"
+                                                                          ], help='list of target modules for LoRA')
 
     # Shift detector parmeters
     parser.add_argument('--slide_window_length', type=int, default=7, help='sliding window length')
@@ -25,7 +36,7 @@ def get_args_parser():
     parser.add_argument('--var_threshold', type=float, default=1e-4, help='var_threshold')
     parser.add_argument('--jump_threshold', type=float, default=0.5, help='jump_threshold')
     
-    # dataset  parameters
+    # dataset parameters
     parser.add_argument('--data_path', type=str, default='./data', help='dataset path')
     parser.add_argument('--task_ids', type=int, nargs='+', default=[99, 98, 97], help='task ids')
 

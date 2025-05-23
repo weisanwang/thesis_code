@@ -100,11 +100,18 @@ def train_and_evaluate(model: torch.nn.Module, criterion, val_criterion, data_lo
 
             # Detect if domain shift
             loss_for_peak_detector = loss_batch.item() 
-            if shift_detector.update(loss_for_peak_detector):
+            status = shift_detector.update(loss_for_peak_detector)
+            # If a peak is detected, then means domain shift 
+            if status == 'peak':
                 cl_strategy.on_domain_shift(model)
                 # Write the detected peak into the txt file
                 with open(txt_log, 'a') as f:
                     f.write(f"Batch {writer_batch} got the {shift_detector.peak_count} peak\n")
+            elif status == 'plateau':
+                # Write the detected plateau into the txt file
+                with open(txt_log, 'a') as f:
+                    f.write(f"Batch {writer_batch} got the {shift_detector.plateau_count} plateau\n")
+
                 
             optimizer.zero_grad()
             # Get the gradient of the basic loss

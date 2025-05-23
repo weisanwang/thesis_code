@@ -27,11 +27,11 @@ def main(args):
 
     # Creat training model
     if args.model == 'git_3DUNET':
-        net = UNet3D_test(in_channels=1, num_classes=2).to(device)
+        model = UNet3D_test(in_channels=1, num_classes=2).to(device)
     elif args.model == '3DUNET':
-        net = UNet3D().to(device)
+        model = UNet3D().to(device)
     print(args)
-    optimizer = torch.optim.AdamW(net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
     if args.criterion == 'GDL':
         criterion = GeneralizedDiceLoss(normalization='softmax', epsilon=1e-6)
@@ -41,7 +41,7 @@ def main(args):
         val_criterion = dice_coefficient_logit()
 
     train_and_evaluate(
-        model=net, 
+        model=model,
         criterion=criterion,
         val_criterion=val_criterion, 
         data_loader=data_loader, 

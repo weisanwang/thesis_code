@@ -95,16 +95,27 @@ class LwFStrategy(CLStrategy):
         with torch.no_grad():
             logits_old = self.model_old(inputs)
 
-        # KL : KL(soft(teacher/T) || soft(student/T))
+        '''
+        batch KL loss
+        '''
+        # loss_kl = F.kl_div(
+        #     F.log_softmax(student_logits / self.temperature, dim=1),
+        #     F.softmax(logits_old / self.temperature, dim=1),
+        #     reduction='batchmean'
+        # ) * (self.temperature * self.temperature)
+
+        '''
+        mean KL loss
+        '''
         loss_kl = F.kl_div(
             F.log_softmax(student_logits / self.temperature, dim=1),
             F.softmax(logits_old / self.temperature, dim=1),
-            reduction='batchmean'
-        ) * (self.temperature * self.temperature)
+            reduction='none'
+        ).mean() * (self.temperature * self.temperature)
 
-        ###
-        # log_p = torch.log_softmax(out[:, au] / self.temperature, dim=1)
-        # q = torch.softmax(prev_out[:, au] / self.temperature, dim=1)
-        # res = torch.nn.functional.kl_div(log_p, q, reduction="batchmean")
+        '''
+        weighted KL loss
+        '''
+
 
         return self.lwf_lambda * loss_kl
